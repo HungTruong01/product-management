@@ -5,25 +5,25 @@ const paginationHelper = require("../../helpers/pagination");
 
 // [GET] /admin/product
 
-module.exports.index = async (req,res) => {
+module.exports.index = async (req, res) => {
     // lọc trạng thái
-    const  filterStatus = filterStatusHelper(req.query);
+    const filterStatus = filterStatusHelper(req.query);
 
     let find = {
         deleted: false
     };
 
-    if(req.query.status) {
+    if (req.query.status) {
         find.status = req.query.status
     }
 
     // Tìm kiếm
 
     let objectSearch = searchHelper(req.query);
-    if(objectSearch.regex) {
+    if (objectSearch.regex) {
         find.title = objectSearch.regex;
     }
-    
+
     //Pagination
     const countProducts = await Product.countDocuments(find);
     let objectPagination = paginationHelper(
@@ -35,7 +35,10 @@ module.exports.index = async (req,res) => {
         countProducts
     );
 
-    const products = await Product.find(find).limit(objectPagination.limitItem).skip(objectPagination.skipItem);
+    const products = await Product.find(find)
+    .sort({position: "desc"})
+    .limit(objectPagination.limitItem)
+    .skip(objectPagination.skipItem);
 
     // Trả về giao diện
     res.render("admin/pages/products/index", {
@@ -52,7 +55,7 @@ module.exports.changeStatus = async (req, res) => {
     const status = req.params.status;
     const id = req.params.id;
 
-    await Product.updateOne({_id: id}, {status: status});
+    await Product.updateOne({ _id: id }, { status: status });
     res.redirect("back");
 }
 
@@ -60,15 +63,30 @@ module.exports.changeStatus = async (req, res) => {
 module.exports.changeMulti = async (req, res) => {
     const type = req.body.type;
     const ids = req.body.ids.split(", ");
-    
+
     switch (type) {
         case "active":
-            await Product.updateMany({_id: {$in: ids}}, {status: "active"});
+            await Product.updateMany({ _id: { $in: ids } }, { status: "active" });
             break;
         case "inactive":
-            await Product.updateMany({_id: {$in: ids}}, {status: "inactive"});
+            await Product.updateMany({ _id: { $in: ids } }, { status: "inactive" });
             break;
-    
+        case "delete-all":
+            await Product.updateMany({ _id: { $in: ids } }, {
+                deleted: "true",
+                deletedAt: new Date()
+            });
+            break;
+        case "change-position":
+            for (const item of ids) {
+                let [id,position] = item.split("-");
+                console.log(id);
+                console.log(position);
+                await Product.updateOne({_id: id}, {
+                    position: position
+                });
+            }
+            break;
         default:
             break;
     }
@@ -80,6 +98,11 @@ module.exports.deleteItem = async (req, res) => {
     const status = req.params.status;
     const id = req.params.id;
 
-    await Product.deleteOne({_id: id});
+    //await Product.deleteOne({_id: id});
+    await Product.updateOne({ _id: id }, {
+        deleted: true,
+        deletedAt: new Date()
+    });
+
     res.redirect("back");
 }

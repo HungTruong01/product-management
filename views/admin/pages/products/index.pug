@@ -3,9 +3,12 @@ include ../../mixins/filterStatus.pug
 include ../../mixins/search.pug
 include ../../mixins/pagination.pug
 include ../../mixins/form-change-multi.pug
+include ../../mixins/alert.pug
 
 
 block main 
+    +alert-success(5000)
+
     h1 Danh sách sản phẩm
 
     .card.mb-3 
